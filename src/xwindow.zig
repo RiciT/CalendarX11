@@ -43,8 +43,8 @@ pub const Win = struct {
 
         const class_hint = xl.XAllocClassHint();
         if (class_hint != null) {
-            class_hint.*.res_name = @ptrCast(@constCast("xcalendar").ptr);
-            class_hint.*.res_class = @ptrCast(@constCast("Xcalendar").ptr);
+            class_hint.*.res_name = @ptrCast(@constCast(cfg.CLASS_NAME).ptr);
+            class_hint.*.res_class = @ptrCast(@constCast(cfg.CLASS_CLASS).ptr);
             _ = xl.XSetClassHint(dpy, win, class_hint);
             _ = xl.XFree(class_hint);
         }
