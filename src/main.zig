@@ -133,12 +133,28 @@ pub fn main() !void {
                 if (px) |p| {
                     const row_bytes: usize = @intCast(ul.ulBitmapGetRowBytes(bmp));
 
-                    //copy row-by-row to prevent out-of-bounds panics
+                    //get masks from the visual to find the correct bit shifts
+                    const r_mask = win.visual.*.red_mask;
+                    const g_mask = win.visual.*.green_mask;
+                    const b_mask = win.visual.*.blue_mask;
+
                     var y: usize = 0;
                     while (y < cfg.WIN_H) : (y += 1) {
-                        const src_row = @as([*]const u8, @ptrCast(p))[y * row_bytes .. y * row_bytes + win.stride];
-                        const dst_row = @as([*]u8, @ptrCast(win.buf_raw))[y * win.stride .. y * win.stride + win.stride];
-                        @memcpy(dst_row, src_row);
+                        const src_row = @as([*]const u8, @ptrCast(p)) + (y * row_bytes);
+                        const dst_row = @as([*]u32, @alignCast(@ptrCast(win.buf_raw))) + (y * (win.stride / 4));
+
+                        var x: usize = 0;
+                        while (x < cfg.WIN_W) : (x += 1) {
+                            //ultralight always uses BGRA
+                            const b: u32 = src_row[x * 4 + 0];
+                            const g: u32 = src_row[x * 4 + 1];
+                            const r: u32 = src_row[x * 4 + 2];
+
+                            //shift colors into the positions X11 expects
+                            dst_row[x] = (r << @intCast(@ctz(r_mask))) |
+                                         (g << @intCast(@ctz(g_mask))) |
+                                         (b << @intCast(@ctz(b_mask)));
+                        }
                     }
                 }
                 ul.ulBitmapUnlockPixels(bmp);
