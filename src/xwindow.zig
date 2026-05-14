@@ -21,7 +21,6 @@ pub const Win = struct {
             std.log.err("XOpenDisplay failed – is $DISPLAY set?", .{});
             return error.NoDisplay;
         };
-        defer _ = xl.XCloseDisplay(dpy); //runs last declared first: LIFO
 
         const scr = xl.XDefaultScreen(dpy);
         const root = xl.XRootWindow(dpy, scr);
@@ -70,7 +69,6 @@ pub const Win = struct {
         _ = xl.XFlush(dpy);
 
         const gc = xl.XCreateGC(dpy, win, 0, null);
-        defer _ = xl.XFreeGC(dpy, gc);
 
         //pixel buffer
         //we hand the raw pointer to XCreateImage; XDestroyImage will free it, so
@@ -93,16 +91,6 @@ pub const Win = struct {
             32, //bitmap_pad: align rows to 32-bit words
             @intCast(stride), //bytes_per_line
         ) orelse return error.XCreateImageFailed;
-        //XDestroyImage frees both the XImage struct and img->data
-        defer {
-            //prevent X11 from freeing the buffer with C's free()
-            img.*.data = null;
-
-            //destroy the XImage struct
-            if (img.*.f.destroy_image) |destroy_fn| {
-                _ = destroy_fn(img);
-            }
-        }
 
         return Win{
             .dpy = dpy,
@@ -119,6 +107,16 @@ pub const Win = struct {
     }
 
     pub fn deinit(self: *Win) void {
+        defer {
+            self.img.*.data = null;
+
+            //destroy the XImage struct
+            if (self.img.*.f.destroy_image) |destroy_fn| {
+                _ = destroy_fn(self.img);
+            }
+        }
+
+        _ = xl.XFreeGC(self.dpy, self.gc);
         _ = xl.XDestroyWindow(self.dpy, self.win);
         _ = xl.XCloseDisplay(self.dpy);
     }

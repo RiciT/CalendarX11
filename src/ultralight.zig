@@ -30,7 +30,6 @@ pub const Ultralight = struct {
         }
         //ultralight renderer
         const config = ul.ulCreateConfig();
-        defer ul.ulDestroyConfig(config);
         {
             const rp = ul.ulCreateString("resources/");
             defer ul.ulDestroyString(rp);
@@ -38,16 +37,13 @@ pub const Ultralight = struct {
         }
 
         const renderer = ul.ulCreateRenderer(config);
-        defer ul.ulDestroyRenderer(renderer);
 
         //ultralight view
         const vcfg = ul.ulCreateViewConfig();
-        defer ul.ulDestroyViewConfig(vcfg);
         ul.ulViewConfigSetInitialDeviceScale(vcfg, 1.0);
         ul.ulViewConfigSetIsTransparent(vcfg, false);
 
         const view = ul.ulCreateView(renderer, cfg.WIN_W, cfg.WIN_H, vcfg, null);
-        defer ul.ulDestroyView(view);
 
         ul.ulViewSetFinishLoadingCallback(view, cbFinishLoad, null);
         ul.ulViewFocus(view);
@@ -68,6 +64,13 @@ pub const Ultralight = struct {
             .view = view,
             .g_repaint = &g_repaint,
        };
+    }
+
+    pub fn deinit(self: *Ultralight) void {
+        ul.ulDestroyView(self.view);
+        ul.ulDestroyViewConfig(self.view_config);
+        ul.ulDestroyRenderer(self.renderer);
+        ul.ulDestroyConfig(self.config);
     }
 
     //ultralight callbacks

@@ -14,7 +14,8 @@ pub fn main() !void {
     defer win.deinit();
 
     //ultralight cfg
-    const ultra = try Ultra.init();
+    var ultra = try Ultra.init();
+    defer ultra.deinit();
 
     var running = true;
     var ev: xl.XEvent = undefined;
