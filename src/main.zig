@@ -233,16 +233,7 @@ pub fn main() !void {
     const cfg = ul.ulCreateConfig();
     defer ul.ulDestroyConfig(cfg);
     {
-        var buf: [std.fs.max_path_bytes]u8 = undefined;
-        const abs_path = std.fs.cwd().realpath("resources", &buf) catch |err| {
-            std.log.err("Failed to resolve resources path: {}", .{err});
-            return err;
-        };
-
-        var path_with_slash: [std.fs.max_path_bytes + 1]u8 = undefined;
-        const final_path = std.fmt.bufPrintZ(&path_with_slash, "{s}/", .{abs_path}) catch unreachable;
-
-        const rp = ul.ulCreateString(final_path.ptr);
+        const rp = ul.ulCreateString("resources/");
         defer ul.ulDestroyString(rp);
         ul.ulConfigSetResourcePathPrefix(cfg, rp);
     }
