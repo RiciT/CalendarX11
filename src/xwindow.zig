@@ -73,6 +73,7 @@ pub const Win = struct {
         //pixel buffer
         //we hand the raw pointer to XCreateImage; XDestroyImage will free it, so
         //we must allocate it with malloc (C heap), not the Zig allocator.
+        //note that we must @ptrCast it to return it
         const stride: usize = @as(usize, cfg.WIN_W) * 4;
         const buf_len: usize = stride * @as(usize, cfg.WIN_H);
 
