@@ -3,6 +3,7 @@ const std = @import("std");
 
 const ul = @cImport({
     @cInclude("Ultralight/CAPI.h");
+    @cInclude("AppCore/CAPI.h");
 });
 
 const xl = @cImport({
@@ -215,6 +216,19 @@ pub fn main() !void {
         }
     }
 
+    //enable platform subsystems provided by AppCore BEFORE creating the renderer
+    ul.ulEnablePlatformFontLoader();
+    {
+        const fs_path = ul.ulCreateString("./");
+        defer ul.ulDestroyString(fs_path);
+        ul.ulEnablePlatformFileSystem(fs_path);
+    }
+
+    {
+        const log_path = ul.ulCreateString("./ultralight.log");
+        defer ul.ulDestroyString(log_path);
+        ul.ulEnableDefaultLogger(log_path);
+    }
     //ultralight renderer
     const cfg = ul.ulCreateConfig();
     defer ul.ulDestroyConfig(cfg);

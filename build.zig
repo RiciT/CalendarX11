@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) void {
     exe.linkSystemLibrary("Ultralight");
     exe.linkSystemLibrary("UltralightCore");
     exe.linkSystemLibrary("WebCore");
+    exe.linkSystemLibrary("AppCore");
 
     //X11
     exe.linkSystemLibrary("X11");
