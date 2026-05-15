@@ -5,7 +5,6 @@ const xl = @import("c.zig").xl;
 const cfg = @import("cfg.zig");
 
 //shared state
-var g_repaint = std.atomic.Value(bool).init(true);
 var g_should_exit = std.atomic.Value(bool).init(false);
 
 pub const Ultralight = struct {
@@ -13,7 +12,6 @@ pub const Ultralight = struct {
     renderer: ul.ULRenderer,
     view_config: ul.ULViewConfig,
     view: ul.ULView,
-    g_repaint: *std.atomic.Value(bool),
     g_should_exit: *std.atomic.Value(bool),
 
     pub fn init() !Ultralight {
@@ -65,7 +63,6 @@ pub const Ultralight = struct {
             .renderer = renderer,
             .view_config = vcfg,
             .view = view,
-            .g_repaint = &g_repaint,
             .g_should_exit = &g_should_exit,
         };
     }
@@ -86,7 +83,6 @@ pub const Ultralight = struct {
         _: ul.ULString, // url
     ) callconv(.c) void {
         if (is_main_frame) {
-            g_repaint.store(true, .release);
             std.log.info("Vite page loaded successfully.", .{});
         }
     }

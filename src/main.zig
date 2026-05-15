@@ -36,8 +36,7 @@ pub fn main() !void {
                 },
 
                 xl.Expose => {
-                    //win became visible, uncovered
-                    ultra.g_repaint.store(true, .release);
+                    //handled by unconditional blit
                 },
 
                 xl.KeyPress => {
@@ -106,74 +105,34 @@ pub fn main() !void {
         //blit to X11
         const surf = ul.ulViewGetSurface(ultra.view);
         //prevent segfaults by checking if the surface exists yet
-        if (surf != null) {
-            const dirty = ul.ulSurfaceGetDirtyBounds(surf);
-
-            if (dirty.right > dirty.left or ultra.g_repaint.load(.acquire)) {
-                ultra.g_repaint.store(false, .release);
-                ul.ulSurfaceClearDirtyBounds(surf);
-
-                //copy the Ultralight bgra bitmap into the XImage buffer.
-                const bmp = ul.ulBitmapSurfaceGetBitmap(surf);
-                const px = ul.ulBitmapLockPixels(bmp);
-
-                if (px) |p| {
-                    const row_bytes: usize = @intCast(ul.ulBitmapGetRowBytes(bmp));
-
-                    //get masks from the visual to find the correct bit shifts
-                    const r_mask = win.visual.*.red_mask;
-                    const g_mask = win.visual.*.green_mask;
-                    const b_mask = win.visual.*.blue_mask;
-
-                    var y: usize = 0;
-                    while (y < cfg.WIN_H) : (y += 1) {
-                        const src_row = @as([*]const u8, @ptrCast(p)) + (y * row_bytes);
-                        const dst_row = @as([*]u32, @ptrCast(@alignCast(win.buf_raw))) + (y * (win.stride / 4));
-
-                        var x: usize = 0;
-                        while (x < cfg.WIN_W) : (x += 1) {
-                            //ultralight always uses BGRA
-                            const b: u32 = src_row[x * 4 + 0];
-                            const g: u32 = src_row[x * 4 + 1];
-                            const r: u32 = src_row[x * 4 + 2];
-
-                            //shift colors into the positions X11 expects
-                            dst_row[x] = (r << @intCast(@ctz(r_mask))) |
-                                (g << @intCast(@ctz(g_mask))) |
-                                (b << @intCast(@ctz(b_mask)));
-                        }
-                    }
-                }
-                ul.ulBitmapUnlockPixels(bmp);
-
-                _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0, // src x, y
-                    0, 0, // dst x, y
-                    cfg.WIN_W, cfg.WIN_H);
-                _ = xl.XFlush(win.dpy);
-            }
-        }
-
-        const dirty = ul.ulSurfaceGetDirtyBounds(surf);
-
-        if (dirty.right > dirty.left or ultra.g_repaint.load(.acquire)) {
-            ultra.g_repaint.store(false, .release);
+        //dont need to do it twice just simply do blit every frame
+       if (surf != null) {
             ul.ulSurfaceClearDirtyBounds(surf);
-
-            //copy the Ultralight bgra bitmap into the XImage buffer.
             const bmp = ul.ulBitmapSurfaceGetBitmap(surf);
             const px = ul.ulBitmapLockPixels(bmp);
             if (px) |p| {
                 const row_bytes: usize = @intCast(ul.ulBitmapGetRowBytes(bmp));
-                const total: usize = row_bytes * @as(usize, cfg.WIN_H);
-                const dst = @as([*]u8, @ptrCast(win.buf_raw))[0..total];
-                const src = @as([*]const u8, @ptrCast(p))[0..total];
-                @memcpy(dst, src);
+                const r_mask = win.visual.*.red_mask;
+                const g_mask = win.visual.*.green_mask;
+                const b_mask = win.visual.*.blue_mask;
+                var y: usize = 0;
+                while (y < cfg.WIN_H) : (y += 1) {
+                    const src_row = @as([*]const u8, @ptrCast(p)) + (y * row_bytes);
+                    const dst_row = @as([*]u32, @ptrCast(@alignCast(win.buf_raw))) + (y * (win.stride / 4));
+                    var x: usize = 0;
+                    while (x < cfg.WIN_W) : (x += 1) {
+                        const b: u32 = src_row[x * 4 + 0];
+                        const g: u32 = src_row[x * 4 + 1];
+                        const r: u32 = src_row[x * 4 + 2];
+                        dst_row[x] = (r << @intCast(@ctz(r_mask))) |
+                            (g << @intCast(@ctz(g_mask))) |
+                            (b << @intCast(@ctz(b_mask)));
+                    }
+                }
             }
             ul.ulBitmapUnlockPixels(bmp);
-
-            _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0, // src x, y
-                0, 0, // dst x, y
-                cfg.WIN_W, cfg.WIN_H);
+            _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0,
+                0, 0, cfg.WIN_W, cfg.WIN_H);
             _ = xl.XFlush(win.dpy);
         }
 
