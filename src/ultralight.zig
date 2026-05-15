@@ -6,6 +6,7 @@ const cfg = @import("cfg.zig");
 
 //shared state
 var g_repaint = std.atomic.Value(bool).init(true);
+var g_should_exit = std.atomic.Value(bool).init(false);
 
 pub const Ultralight = struct {
     config: ul.ULConfig,
@@ -13,6 +14,7 @@ pub const Ultralight = struct {
     view_config: ul.ULViewConfig,
     view: ul.ULView,
     g_repaint: *std.atomic.Value(bool),
+    g_should_exit: *std.atomic.Value(bool),
 
     pub fn init() !Ultralight {
         //enable platform subsystems provided by AppCore BEFORE creating the renderer
@@ -46,6 +48,7 @@ pub const Ultralight = struct {
         const view = ul.ulCreateView(renderer, cfg.WIN_W, cfg.WIN_H, vcfg, null);
 
         ul.ulViewSetFinishLoadingCallback(view, cbFinishLoad, null);
+        ul.ulViewSetDOMReadyCallback(view, cbDOMReady, null);
         ul.ulViewFocus(view);
 
         //navigate to the Vite dev server.
@@ -63,6 +66,7 @@ pub const Ultralight = struct {
             .view_config = vcfg,
             .view = view,
             .g_repaint = &g_repaint,
+            .g_should_exit = &g_should_exit,
         };
     }
 
@@ -85,6 +89,91 @@ pub const Ultralight = struct {
             g_repaint.store(true, .release);
             std.log.info("Vite page loaded successfully.", .{});
         }
+    }
+
+    //fires when the DOM is ready
+    fn cbDOMReady(
+        _: ?*anyopaque,
+        view: ul.ULView,
+        _: c_ulonglong,
+        is_main_frame: bool,
+        _: ul.ULString,
+    ) callconv(.c) void {
+        if (!is_main_frame) return;
+
+        const ctx = ul.ulViewLockJSContext(view);
+        defer ul.ulViewUnlockJSContext(view);
+
+        const global = ul.JSContextGetGlobalObject(ctx);
+
+        const save_name = ul.JSStringCreateWithUTF8CString("__saveEvent");
+        defer ul.JSStringRelease(save_name);
+        ul.JSObjectSetProperty(
+            ctx, global, save_name,
+            ul.JSObjectMakeFunctionWithCallback(ctx, save_name, saveEventCB),
+            0, null, // attributes=none, no exception out-param
+        );
+
+        const exit_name = ul.JSStringCreateWithUTF8CString("__exitApp");
+        defer ul.JSStringRelease(exit_name);
+        ul.JSObjectSetProperty(
+            ctx, global, exit_name,
+            ul.JSObjectMakeFunctionWithCallback(ctx, exit_name, exitAppCB),
+            0, null,
+        );
+
+        std.log.info("JS bridge: __saveEvent and __exitApp injected.", .{});
+    }
+
+    //window.__saveEvent(jsonString)
+    //appends one JSON object - a single line - to events.jsonl in the cwd.
+    fn saveEventCB(
+        ctx: ul.JSContextRef,
+        _: ul.JSObjectRef,
+        _: ul.JSObjectRef,
+        argument_count: usize,
+        arguments: [*c]const ul.JSValueRef,
+        _: [*c]ul.JSValueRef,
+    ) callconv(.c) ul.JSValueRef {
+        if (argument_count == 0) return ul.JSValueMakeUndefined(ctx);
+
+        const js_str = ul.JSValueToStringCopy(ctx, arguments[0], null);
+        defer ul.JSStringRelease(js_str);
+
+        //event buffer - 8k should be much more than enough
+        var buf: [8192]u8 = undefined;
+        const written = ul.JSStringGetUTF8CString(js_str, &buf, buf.len);
+        if (written == 0) return ul.JSValueMakeUndefined(ctx);
+        const json = buf[0 .. written - 1]; //JSStringGetUTF8CString includes the \0
+
+        //open or create events.jsonl, seek to end, append.
+        const file = std.fs.cwd().openFile("events.jsonl", .{ .mode = .write_only }) catch
+            std.fs.cwd().createFile("events.jsonl", .{}) catch {
+            std.log.err("JS bridge: could not open/create events.jsonl", .{});
+            return ul.JSValueMakeUndefined(ctx);
+        };
+        defer file.close();
+        file.seekFromEnd(0) catch {};
+        file.writeAll(json) catch {};
+        file.writeAll("\n") catch {};
+
+        std.log.info("JS bridge: event saved ({d} bytes).", .{json.len});
+        return ul.JSValueMakeUndefined(ctx);
+    }
+
+    //window.__exitApp()
+    //signals the main loop to stop on the next tick.
+    fn exitAppCB(
+        ctx: ul.JSContextRef,
+        _: ul.JSObjectRef,
+        _: ul.JSObjectRef,
+        _: usize,
+        _: [*c]const ul.JSValueRef,
+        _: [*c]ul.JSValueRef,
+    ) callconv(.c) ul.JSValueRef {
+        g_should_exit.store(true, .release);
+        std.log.info("JS bridge: exit requested.", .{});
+        return ul.JSValueMakeUndefined(ctx);
     }
 
     //input translation helpers

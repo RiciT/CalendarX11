@@ -178,6 +178,7 @@ pub fn main() !void {
         }
 
         //60 hz tick
+        if (ultra.g_should_exit.load(.acquire)) running = false;
         std.Thread.sleep(16 * std.time.ns_per_ms);
     }
 }
