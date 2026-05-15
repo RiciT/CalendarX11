@@ -57,13 +57,13 @@ pub const Ultralight = struct {
 
         std.log.info("Navigating to {s} …", .{cfg.VITE_URL});
 
-        return Ultralight {
+        return Ultralight{
             .config = config,
             .renderer = renderer,
             .view_config = vcfg,
             .view = view,
             .g_repaint = &g_repaint,
-       };
+        };
     }
 
     pub fn deinit(self: *Ultralight) void {
@@ -98,10 +98,10 @@ pub const Ultralight = struct {
     }
 
     //ultralight modifier bit-flags
-    const UL_MOD_ALT : u32 = 1 << 0;
-    const UL_MOD_CTRL : u32 = 1 << 1;
-    const UL_MOD_META : u32 = 1 << 2;
-    const UL_MOD_SHIFT : u32 = 1 << 3;
+    const UL_MOD_ALT: u32 = 1 << 0;
+    const UL_MOD_CTRL: u32 = 1 << 1;
+    const UL_MOD_META: u32 = 1 << 2;
+    const UL_MOD_SHIFT: u32 = 1 << 3;
 
     fn xlModToUL(state: c_uint) u32 {
         var m: u32 = 0;
@@ -168,7 +168,8 @@ pub const Ultralight = struct {
             xlModToUL(state),
             xlKsToVK(ks),
             native,
-            empty, empty, // text, unmodified_text (empty for raw events)
+            empty,
+            empty, // text, unmodified_text (empty for raw events)
             false, // is_keypad
             false, // is_auto_repeat
             false, // is_system_key
@@ -186,9 +187,13 @@ pub const Ultralight = struct {
             const ce = ul.ulCreateKeyEvent(
                 ul.kKeyEventType_Char,
                 xlModToUL(state),
-                0, 0,
-                text, text,
-                false, false, false,
+                0,
+                0,
+                text,
+                text,
+                false,
+                false,
+                false,
             );
             ul.ulViewFireKeyEvent(view, ce);
             ul.ulDestroyKeyEvent(ce);

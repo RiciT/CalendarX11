@@ -27,12 +27,11 @@ pub fn main() !void {
         while (xl.XPending(win.dpy) > 0) {
             _ = xl.XNextEvent(win.dpy, &ev);
 
-            switch (ev.@"type") {
-
+            switch (ev.type) {
                 xl.ClientMessage => {
                     //wm sent close button
                     if (ev.xclient.data.l[0] ==
-                            @as(c_long, @intCast(win.wm_del)))
+                        @as(c_long, @intCast(win.wm_del)))
                         running = false;
                 },
 
@@ -43,17 +42,16 @@ pub fn main() !void {
 
                 xl.KeyPress => {
                     const ks = xl.XLookupKeysym(&ev.xkey, 0);
-                    if (ks == xl.XK_Escape) { running = false; break; }
-                    Ultra.fireKey(ultra.view, ul.kKeyEventType_RawKeyDown,
-                            ev.xkey.state, ks,
-                            @intCast(ev.xkey.keycode));
+                    if (ks == xl.XK_Escape) {
+                        running = false;
+                        break;
+                    }
+                    Ultra.fireKey(ultra.view, ul.kKeyEventType_RawKeyDown, ev.xkey.state, ks, @intCast(ev.xkey.keycode));
                 },
 
                 xl.KeyRelease => {
                     const ks = xl.XLookupKeysym(&ev.xkey, 0);
-                    Ultra.fireKey(ultra.view, ul.kKeyEventType_KeyUp,
-                            ev.xkey.state, ks,
-                            @intCast(ev.xkey.keycode));
+                    Ultra.fireKey(ultra.view, ul.kKeyEventType_KeyUp, ev.xkey.state, ks, @intCast(ev.xkey.keycode));
                 },
 
                 xl.ButtonPress => {
@@ -61,22 +59,17 @@ pub fn main() !void {
                     if (btn == 4 or btn == 5) {
                         //vertical scroll wheel
                         const dy: c_int = if (btn == 4) 40 else -40;
-                        const se = ul.ulCreateScrollEvent(
-                            ul.kScrollEventType_ScrollByPixel, 0, dy);
+                        const se = ul.ulCreateScrollEvent(ul.kScrollEventType_ScrollByPixel, 0, dy);
                         ul.ulViewFireScrollEvent(ultra.view, se);
                         ul.ulDestroyScrollEvent(se);
                     } else if (btn == 6 or btn == 7) {
                         //horizontal scroll wheel
                         const dx: c_int = if (btn == 6) -40 else 40;
-                        const se = ul.ulCreateScrollEvent(
-                            ul.kScrollEventType_ScrollByPixel, dx, 0);
+                        const se = ul.ulCreateScrollEvent(ul.kScrollEventType_ScrollByPixel, dx, 0);
                         ul.ulViewFireScrollEvent(ultra.view, se);
                         ul.ulDestroyScrollEvent(se);
                     } else {
-                        const me = ul.ulCreateMouseEvent(
-                            ul.kMouseEventType_MouseDown,
-                            ev.xbutton.x, ev.xbutton.y,
-                            Ultra.xlBtnToUL(btn));
+                        const me = ul.ulCreateMouseEvent(ul.kMouseEventType_MouseDown, ev.xbutton.x, ev.xbutton.y, Ultra.xlBtnToUL(btn));
                         ul.ulViewFireMouseEvent(ultra.view, me);
                         ul.ulDestroyMouseEvent(me);
                     }
@@ -85,20 +78,14 @@ pub fn main() !void {
                 xl.ButtonRelease => {
                     const btn = ev.xbutton.button;
                     if (btn != 4 and btn != 5 and btn != 6 and btn != 7) {
-                        const me = ul.ulCreateMouseEvent(
-                            ul.kMouseEventType_MouseUp,
-                            ev.xbutton.x, ev.xbutton.y,
-                            Ultra.xlBtnToUL(btn));
+                        const me = ul.ulCreateMouseEvent(ul.kMouseEventType_MouseUp, ev.xbutton.x, ev.xbutton.y, Ultra.xlBtnToUL(btn));
                         ul.ulViewFireMouseEvent(ultra.view, me);
                         ul.ulDestroyMouseEvent(me);
                     }
                 },
 
                 xl.MotionNotify => {
-                    const me = ul.ulCreateMouseEvent(
-                        ul.kMouseEventType_MouseMoved,
-                        ev.xmotion.x, ev.xmotion.y,
-                        ul.kMouseButton_None);
+                    const me = ul.ulCreateMouseEvent(ul.kMouseEventType_MouseMoved, ev.xmotion.x, ev.xmotion.y, ul.kMouseButton_None);
                     ul.ulViewFireMouseEvent(ultra.view, me);
                     ul.ulDestroyMouseEvent(me);
                 },
@@ -141,7 +128,7 @@ pub fn main() !void {
                     var y: usize = 0;
                     while (y < cfg.WIN_H) : (y += 1) {
                         const src_row = @as([*]const u8, @ptrCast(p)) + (y * row_bytes);
-                        const dst_row = @as([*]u32, @alignCast(@ptrCast(win.buf_raw))) + (y * (win.stride / 4));
+                        const dst_row = @as([*]u32, @ptrCast(@alignCast(win.buf_raw))) + (y * (win.stride / 4));
 
                         var x: usize = 0;
                         while (x < cfg.WIN_W) : (x += 1) {
@@ -152,15 +139,14 @@ pub fn main() !void {
 
                             //shift colors into the positions X11 expects
                             dst_row[x] = (r << @intCast(@ctz(r_mask))) |
-                                         (g << @intCast(@ctz(g_mask))) |
-                                         (b << @intCast(@ctz(b_mask)));
+                                (g << @intCast(@ctz(g_mask))) |
+                                (b << @intCast(@ctz(b_mask)));
                         }
                     }
                 }
                 ul.ulBitmapUnlockPixels(bmp);
 
-                _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img,
-                    0, 0, // src x, y
+                _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0, // src x, y
                     0, 0, // dst x, y
                     cfg.WIN_W, cfg.WIN_H);
                 _ = xl.XFlush(win.dpy);
@@ -185,8 +171,7 @@ pub fn main() !void {
             }
             ul.ulBitmapUnlockPixels(bmp);
 
-            _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img,
-                0, 0, // src x, y
+            _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0, // src x, y
                 0, 0, // dst x, y
                 cfg.WIN_W, cfg.WIN_H);
             _ = xl.XFlush(win.dpy);

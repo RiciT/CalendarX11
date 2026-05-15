@@ -1,6 +1,7 @@
 pub const ul = @cImport({
     @cInclude("Ultralight/CAPI.h");
     @cInclude("AppCore/CAPI.h");
+    @cInclude("JavaScriptCore/JavaScript.h");
 });
 
 pub const xl = @cImport({

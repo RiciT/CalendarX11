@@ -32,6 +32,7 @@ pub const Win = struct {
         wa.bit_gravity = xl.NorthWestGravity;
         wa.colormap = xl.XCreateColormap(dpy, root, visual, xl.AllocNone);
 
+        //@divExact divides comptime_int with c_int
         const win = xl.XCreateWindow(dpy, root, @divExact((xl.DisplayWidth(dpy, scr) - cfg.WIN_W), 2), @divExact((xl.DisplayHeight(dpy, scr) - cfg.WIN_H), 2), cfg.WIN_W, cfg.WIN_H, 0, depth, xl.InputOutput, visual, xl.CWBackPixel | xl.CWBorderPixel | xl.CWBitGravity | xl.CWColormap, &wa);
 
         //create wm hints
