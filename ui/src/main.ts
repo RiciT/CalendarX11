@@ -1,21 +1,13 @@
+import "@w3cj/magic-date-picker/bundled";
 import type {
   DatePickerOutput,
   DateParseDetail,
   MagicDatePicker,
 } from "@w3cj/magic-date-picker";
-import { renderMiniCalendar } from "./calendar.ts";
 import { callSave, callExit } from "./bridge.js";
 import "./style.css";
 
 //type defs
-interface EventRecord {
-  date: string; //ISO 8601 date portion
-  dateText: string; //human-readable date
-  time: string; //local time
-  description: string;
-  savedAt: string; //iso timestamp
-}
-
 type Screen = "date" | "details" | "done";
 
 interface AppState {
@@ -86,8 +78,6 @@ function renderDateScreen(): void {
   const picker = document.getElementById("date-picker") as MagicDatePicker;
   const parseFeedback = document.getElementById("parse-feedback")!;
   const confirmation = document.getElementById("confirmation")!;
-  const calendarSlot = document.getElementById("calendar-slot")!;
-  const dateSummary = document.getElementById("date-summary")!;
   const nextBtn = document.getElementById("next-btn") as HTMLButtonElement;
 
   //live feedback
@@ -113,9 +103,6 @@ function renderDateScreen(): void {
 
     const startDate = new Date(e.detail.start.iso);
     const endDate = e.detail.isRange ? new Date(e.detail.end.iso) : undefined;
-
-    calendarSlot.innerHTML = renderMiniCalendar(startDate, true, endDate);
-    dateSummary.innerHTML = `<span class="check-icon">✓</span> ${e.detail.text}`;
 
     confirmation.classList.remove("hidden");
     nextBtn.focus();
