@@ -6,6 +6,8 @@ const cfg = @import("cfg.zig");
 
 //shared state
 var g_should_exit = std.atomic.Value(bool).init(false);
+var g_page_ready = std.atomic.Value(bool).init(false);
+var g_ui_ready = std.atomic.Value(bool).init(false);
 
 pub const Ultralight = struct {
     config: ul.ULConfig,
@@ -13,12 +15,14 @@ pub const Ultralight = struct {
     view_config: ul.ULViewConfig,
     view: ul.ULView,
     g_should_exit: *std.atomic.Value(bool),
+    g_page_ready: *std.atomic.Value(bool),
+    g_ui_ready: *std.atomic.Value(bool),
 
     pub fn init() !Ultralight {
         //enable platform subsystems provided by AppCore BEFORE creating the renderer
         ul.ulEnablePlatformFontLoader();
         {
-            const fs_path = ul.ulCreateString("./");
+            const fs_path = ul.ulCreateString("/");
             defer ul.ulDestroyString(fs_path);
             ul.ulEnablePlatformFileSystem(fs_path);
         }
@@ -31,7 +35,7 @@ pub const Ultralight = struct {
         //ultralight renderer
         const config = ul.ulCreateConfig();
         {
-            const rp = ul.ulCreateString("resources/");
+            const rp = ul.ulCreateString("/home/br4mos/PERSONAL/Developing/CalendarX11/deps/ultralight/resources/");
             defer ul.ulDestroyString(rp);
             ul.ulConfigSetResourcePathPrefix(config, rp);
         }
@@ -64,6 +68,8 @@ pub const Ultralight = struct {
             .view_config = vcfg,
             .view = view,
             .g_should_exit = &g_should_exit,
+            .g_page_ready = &g_page_ready,
+            .g_ui_ready = &g_ui_ready,
         };
     }
 
@@ -83,6 +89,7 @@ pub const Ultralight = struct {
         _: ul.ULString, // url
     ) callconv(.c) void {
         if (is_main_frame) {
+            g_page_ready.store(true, .release);
             std.log.info("Vite page loaded successfully.", .{});
         }
     }
@@ -116,6 +123,13 @@ pub const Ultralight = struct {
             ctx, global, exit_name,
             ul.JSObjectMakeFunctionWithCallback(ctx, exit_name, exitAppCB),
             0, null,
+        );
+
+        const ready_name = ul.JSStringCreateWithUTF8CString("__notifyReady");
+        defer ul.JSStringRelease(ready_name);
+        ul.JSObjectSetProperty(
+            ctx, global, ready_name,
+            ul.JSObjectMakeFunctionWithCallback(ctx, ready_name, notifyReadyCB), 0, null,
         );
 
         std.log.info("JS bridge: __saveEvent and __exitApp injected.", .{});
@@ -169,6 +183,19 @@ pub const Ultralight = struct {
     ) callconv(.c) ul.JSValueRef {
         g_should_exit.store(true, .release);
         std.log.info("JS bridge: exit requested.", .{});
+        return ul.JSValueMakeUndefined(ctx);
+    }
+
+    fn notifyReadyCB(
+        ctx: ul.JSContextRef,
+        _: ul.JSObjectRef,
+        _: ul.JSObjectRef,
+        _: usize,
+        _: [*c]const ul.JSValueRef,
+        _: [*c]ul.JSValueRef,
+    ) callconv(.c) ul.JSValueRef {
+        g_ui_ready.store(true, .release);
+        std.log.info("JS Bridge: first frame ready", .{});
         return ul.JSValueMakeUndefined(ctx);
     }
 

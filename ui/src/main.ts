@@ -4,7 +4,7 @@ import type {
   DateParseDetail,
   MagicDatePicker,
 } from "@w3cj/magic-date-picker";
-import { callSave, callExit } from "./bridge.js";
+import { callSave, callExit, callReady } from "./bridge.js";
 import "./style.css";
 
 //type defs
@@ -101,9 +101,6 @@ function renderDateScreen(): void {
     state.dateOutput = e.detail;
     parseFeedback.textContent = "";
 
-    const startDate = new Date(e.detail.start.iso);
-    const endDate = e.detail.isRange ? new Date(e.detail.end.iso) : undefined;
-
     confirmation.classList.remove("hidden");
     nextBtn.focus();
   }) as EventListener);
@@ -143,7 +140,12 @@ function renderDateScreen(): void {
   );
 
   //auto focus the picker onces opened
-  requestAnimationFrame(() => picker.focus?.());
+  customElements.whenDefined("magic-date-picker").then(() => {
+    requestAnimationFrame(() => {
+      picker.focus?.();
+      callReady();
+    });
+  });
 }
 
 //screen 2 - time and description

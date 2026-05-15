@@ -20,9 +20,54 @@ pub fn main() !void {
     var running = true;
     var ev: xl.XEvent = undefined;
 
+    //spin until the page is fully loaded - no sleep so Ultralight can bootstrap as fast as possible - spin on first frame
+    std.log.info("Waiting for first frame...", .{});
+    var spin_ev: xl.XEvent = undefined;
+    while (!ultra.g_ui_ready.load(.acquire)) {
+        while (xl.XPending(win.dpy) > 0) {
+            _ = xl.XNextEvent(win.dpy, &spin_ev);
+            if (spin_ev.type == xl.ClientMessage and spin_ev.xclient.data.l[0] == @as(c_long, @intCast(win.wm_del))) {
+                return; //win closed during load
+            }
+        }
+        ul.ulUpdate(ultra.renderer);
+        ul.ulRender(ultra.renderer);
+        //blit whatever is in the surface so partial renders show through
+        const surf = ul.ulViewGetSurface(ultra.view);
+        if (surf != null) {
+            const bmp = ul.ulBitmapSurfaceGetBitmap(surf);
+            const px = ul.ulBitmapLockPixels(bmp);
+            if (px) |p| {
+                const row_bytes: usize = @intCast(ul.ulBitmapGetRowBytes(bmp));
+                const r_mask = win.visual.*.red_mask;
+                const g_mask = win.visual.*.green_mask;
+                const b_mask = win.visual.*.blue_mask;
+                var y: usize = 0;
+                while (y < cfg.WIN_H) : (y += 1) {
+                    const src_row = @as([*]const u8, @ptrCast(p)) + (y * row_bytes);
+                    const dst_row = @as([*]u32, @ptrCast(@alignCast(win.buf_raw))) + (y * (win.stride / 4));
+                    var x: usize = 0;
+                    while (x < cfg.WIN_W) : (x += 1) {
+                        const b: u32 = src_row[x * 4 + 0];
+                        const g: u32 = src_row[x * 4 + 1];
+                        const r: u32 = src_row[x * 4 + 2];
+                        dst_row[x] = (r << @intCast(@ctz(r_mask))) |
+                            (g << @intCast(@ctz(g_mask))) |
+                            (b << @intCast(@ctz(b_mask)));
+                    }
+                }
+            }
+            ul.ulBitmapUnlockPixels(bmp);
+            _ = xl.XPutImage(win.dpy, win.win, win.gc, win.img, 0, 0,
+                0, 0, cfg.WIN_W, cfg.WIN_H);
+            _ = xl.XFlush(win.dpy);
+        }
+        std.Thread.sleep(4 * std.time.ns_per_ms); //round 250hz, fast enough to catch rAF
+    }
+    std.log.info("First frame ready, entering main loop.", .{});
+
     //main loop
     while (running) {
-
         //X11 dipatch
         while (xl.XPending(win.dpy) > 0) {
             _ = xl.XNextEvent(win.dpy, &ev);
@@ -101,6 +146,9 @@ pub fn main() !void {
         //ultralight tick
         ul.ulUpdate(ultra.renderer); //run timers, network callbacks, JS microtasks
         ul.ulRender(ultra.renderer); //paint any views that are marked dirty
+        //run twice so we catch any asyncs needed
+        ul.ulUpdate(ultra.renderer);
+        ul.ulRender(ultra.renderer);
 
         //blit to X11
         const surf = ul.ulViewGetSurface(ultra.view);

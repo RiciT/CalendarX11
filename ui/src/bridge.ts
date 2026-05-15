@@ -4,7 +4,12 @@ declare global {
   interface Window {
     __saveEvent?: (json: string) => void;
     __exitApp?: () => void;
+    __notifyReady?: () => void;
   }
+}
+
+export function callReady(): void {
+  window.__notifyReady?.();
 }
 
 export function callSave(json: string): boolean {
