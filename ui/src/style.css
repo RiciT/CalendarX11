@@ -274,11 +274,6 @@ magic-date-picker {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-.form__input--time {
-  max-width: 160px;
-  color-scheme: dark;
-}
-
 .form__textarea {
   resize: none;
   min-height: 100px;
@@ -329,4 +324,86 @@ magic-date-picker {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
+}
+
+/* time range */
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.time-range__slot {
+  display: flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 1rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: default;
+  user-select: none;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  min-width: 6rem;
+  justify-content: center;
+}
+
+.time-range__slot--focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.time-range__part {
+  border-radius: 3px;
+  padding: 0 0.15rem;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.time-range__part.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.time-range__colon {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0.05rem;
+  line-height: 1;
+}
+
+.time-range__sep {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.form__hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: -0.25rem;
+}
+
+/* whole day badge */
+.badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
 }

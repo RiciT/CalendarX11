@@ -1,5 +1,3 @@
-//bridge to the ultralight api set up in zig - TODO
-
 declare global {
   interface Window {
     __saveEvent?: (json: string) => void;
