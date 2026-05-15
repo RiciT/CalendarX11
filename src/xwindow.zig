@@ -59,7 +59,8 @@ pub const Win = struct {
                 xl.KeyReleaseMask |
                 xl.ButtonPressMask |
                 xl.ButtonReleaseMask |
-                xl.PointerMotionMask,
+                xl.PointerMotionMask |
+                xl.FocusChangeMask,
         );
         _ = xl.XMapWindow(dpy, win);
 

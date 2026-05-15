@@ -31,6 +31,10 @@ pub fn main() !void {
             }
         }
         ul.ulUpdate(ultra.renderer);
+        ul.ulViewSetNeedsPaint(ultra.view, true);
+        ul.ulRender(ultra.renderer);
+        ul.ulUpdate(ultra.renderer);
+        ul.ulViewSetNeedsPaint(ultra.view, true);
         ul.ulRender(ultra.renderer);
         //blit whatever is in the surface so partial renders show through
         const surf = ul.ulViewGetSurface(ultra.view);
@@ -62,7 +66,7 @@ pub fn main() !void {
                 0, 0, cfg.WIN_W, cfg.WIN_H);
             _ = xl.XFlush(win.dpy);
         }
-        std.Thread.sleep(4 * std.time.ns_per_ms); //round 250hz, fast enough to catch rAF
+        std.Thread.yield() catch {};
     }
     std.log.info("First frame ready, entering main loop.", .{});
 
@@ -139,15 +143,25 @@ pub fn main() !void {
                     // ul.ulViewResize(view, new_w, new_h);
                 },
 
+                xl.FocusIn => {
+                    ul.ulViewFocus(ultra.view);
+                },
+
+                xl.FocusOut => {
+                    ul.ulViewUnfocus(ultra.view);
+                },
+
                 else => {},
             }
         }
 
         //ultralight tick
         ul.ulUpdate(ultra.renderer); //run timers, network callbacks, JS microtasks
+        ul.ulViewSetNeedsPaint(ultra.view, true);
         ul.ulRender(ultra.renderer); //paint any views that are marked dirty
         //run twice so we catch any asyncs needed
         ul.ulUpdate(ultra.renderer);
+        ul.ulViewSetNeedsPaint(ultra.view, true);
         ul.ulRender(ultra.renderer);
 
         //blit to X11

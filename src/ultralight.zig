@@ -103,6 +103,7 @@ pub const Ultralight = struct {
         _: ul.ULString,
     ) callconv(.c) void {
         if (!is_main_frame) return;
+        std.log.info("DOM ready - injecting bridge...", .{});
 
         const ctx = ul.ulViewLockJSContext(view);
         defer ul.ulViewUnlockJSContext(view);
