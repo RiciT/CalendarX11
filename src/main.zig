@@ -7,6 +7,38 @@ const cfg = @import("cfg.zig");
 const Xwin = @import("xwindow.zig").Win;
 const Ultra = @import("ultralight.zig").Ultralight;
 
+fn pasteClipboard(view: ul.ULView, text: []const u8) void {
+    //handle clipboard
+    //to avoid dynamic allocation use 8KB for the buffer
+    var buf: [8192]u8 = undefined;
+    var pos: usize = 0;
+
+    const prefix = "document.execCommand('insertText',false,'";
+    const suffix = "')";
+
+    @memcpy(buf[pos..][0..prefix.len], prefix);
+    pos += prefix.len;
+
+    for (text) |c| {
+        if (pos + 4 >= buf.len) break; //for safety - leave room for suffix+null
+        switch (c) {
+            '\\' => { buf[pos] = '\\'; buf[pos+1] = '\\'; pos += 2; },
+            '\'' => { buf[pos] = '\\'; buf[pos+1] = '\''; pos += 2; },
+            '\n' => { buf[pos] = '\\'; buf[pos+1] = 'n'; pos += 2; },
+            '\r' => {},
+            else => { buf[pos] = c; pos += 1; },
+        }
+    }
+
+    @memcpy(buf[pos..][0..suffix.len], suffix);
+    pos += suffix.len;
+    buf[pos] = 0;
+
+    const js = ul.ulCreateString(@ptrCast(&buf));
+    defer ul.ulDestroyString(js);
+    _ = ul.ulViewEvaluateScript(view, js, null);
+}
+
 //entry point
 pub fn main() !void {
     //x11
@@ -106,6 +138,13 @@ pub fn main() !void {
                             Ultra.fireChar(ultra.view, &char_buf, @intCast(n));
                         }
                     }
+                    //intercespt ctrl-v
+                    if (ks == xl.XK_v and ev.xkey.state & xl.ControlMask != 0) {
+                        const clipboard = xl.XInternAtom(win.dpy, "CLIPBOARD", xl.False);
+                        const utf8 = xl.XInternAtom(win.dpy, "UTF8_STRING", xl.False);
+                        const xsel_data = xl.XInternAtom(win.dpy, "XSEL_DATA", xl.False);
+                        _ = xl.XConvertSelection(win.dpy, clipboard, utf8, xsel_data, win.win, xl.CurrentTime);
+                    }
                 },
 
                 xl.KeyRelease => {
@@ -147,6 +186,29 @@ pub fn main() !void {
                     const me = ul.ulCreateMouseEvent(ul.kMouseEventType_MouseMoved, ev.xmotion.x, ev.xmotion.y, ul.kMouseButton_None);
                     ul.ulViewFireMouseEvent(ultra.view, me);
                     ul.ulDestroyMouseEvent(me);
+                },
+
+                xl.SelectionNotify => {
+                    //fired when the clipboard has written the requested data
+                    if (ev.xselection.property == xl.None) break; //no owner
+                    const xsel_data = xl.XInternAtom(win.dpy, "XSEL_DATA", xl.False);
+                    var actual_type: xl.Atom = undefined;
+                    var actual_format: c_int = undefined;
+                    var nitems: c_ulong = undefined;
+                    var bytes_after: c_ulong = undefined;
+                    var data: [*c]u8 = undefined;
+                    _ = xl.XGetWindowProperty(
+                        win.dpy, win.win, xsel_data,
+                        0, 1024 * 1024, //offset length
+                        xl.True, //delete after reading
+                        xl.AnyPropertyType,
+                        &actual_type, &actual_format, &nitems, &bytes_after,
+                        @ptrCast(&data),
+                    );
+                    if (data != null and nitems > 0) {
+                        pasteClipboard(ultra.view, data[0..nitems]);
+                        _ = xl.XFree(data);
+                    }
                 },
 
                 xl.ConfigureNotify => {
