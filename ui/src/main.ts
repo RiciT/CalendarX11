@@ -167,21 +167,6 @@ function renderDateScreen(): void {
       picker.focus?.();
       callReady();
     });
-
-    //inject a style into the shadow DOM to hide the help text
-    if (picker.shadowRoot) {
-      const injectHide = () => {
-        if (picker.shadowRoot!.querySelector(".help-text")) {
-          const style = document.createElement("style");
-          style.textContent = ".help-text { display: none !important; }";
-          picker.shadowRoot!.appendChild(style);
-          observer.disconnect();
-        }
-      };
-      const observer = new MutationObserver(injectHide);
-      observer.observe(picker.shadowRoot, { childList: true, subtree: true });
-      injectHide(); //also try immediately
-    }
   });
 }
 
