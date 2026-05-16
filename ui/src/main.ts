@@ -135,7 +135,8 @@ function renderDateScreen(): void {
     parseFeedback.textContent = "";
     dateSummary.innerHTML = `<span class="check-icon">✓</span> ${e.detail.text}`;
     confirmation.classList.remove("hidden");
-    nextBtn.focus();
+    confirmation.classList.remove("hidden");
+    setTimeout(() => nextBtn.focus(), 0);
   }) as EventListener);
 
   //when cleared
@@ -153,8 +154,7 @@ function renderDateScreen(): void {
     "keydown",
     (e: KeyboardEvent) => {
       if (e.key !== "Enter") return;
-      if (confirmation.classList.contains("hidden")) return;
-      if (picker.contains(document.activeElement)) return;
+      if (document.activeElement !== nextBtn) return;
       e.preventDefault();
       advance();
     },
