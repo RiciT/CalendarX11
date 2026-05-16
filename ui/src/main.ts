@@ -352,23 +352,35 @@ function initTimeSlot(
     (e: KeyboardEvent) => {
       const [h, m] = getTime();
       switch (e.key) {
-        case "ArrowLeft":
+        case "m":
           e.preventDefault();
           activePart = "hour";
           highlightPart();
           break;
-        case "ArrowRight":
+        case "i":
           e.preventDefault();
           activePart = "minute";
           highlightPart();
           break;
-        case "ArrowUp":
+        case "e":
+          e.preventDefault();
+          activePart === "hour"
+            ? setTime((h + 1) % 24, m)
+            : setTime(h, (m + 5) % 60);
+          break;
+        case "n":
+          e.preventDefault();
+          activePart === "hour"
+            ? setTime((h + 23) % 24, m)
+            : setTime(h, (m + 55) % 60);
+          break;
+        case "E":
           e.preventDefault();
           activePart === "hour"
             ? setTime((h + 1) % 24, m)
             : setTime(h, (m + 1) % 60);
           break;
-        case "ArrowDown":
+        case "N":
           e.preventDefault();
           activePart === "hour"
             ? setTime((h + 23) % 24, m)
