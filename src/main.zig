@@ -272,7 +272,29 @@ pub fn main() !void {
         }
 
         //60 hz tick
-        if (ultra.g_should_exit.load(.acquire)) running = false;
+        if (ultra.g_should_exit.load(.acquire)) {
+            running = false;
+            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            defer _ = gpa.deinit();
+            const allocator = gpa.allocator();
+
+            const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
+            defer allocator.free(exe_dir);
+
+            const script_path = try std.fs.path.join(allocator, &[_][]const u8{ exe_dir, "gcalcall.sh" });
+            defer allocator.free(script_path);
+
+            std.log.info("Executing script at: {s}\n", .{script_path});
+
+            const argv = [_][]const u8{ "bash", script_path };
+
+            var child = std.process.Child.init(&argv, allocator);
+            child.stdin_behavior = .Ignore;
+            child.stdout_behavior = .Ignore;
+            child.stderr_behavior = .Ignore;
+
+            try child.spawn();
+        }
         std.Thread.sleep(16 * std.time.ns_per_ms);
     }
 }

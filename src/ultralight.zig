@@ -28,14 +28,35 @@ pub const Ultralight = struct {
         }
 
         {
-            const log_path = ul.ulCreateString("./ultralight.log");
+            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            defer _ = gpa.deinit();
+            const allocator = gpa.allocator();
+
+            const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
+            defer allocator.free(exe_dir);
+
+            const UL_LOG_DIR = try std.fs.path.joinZ(allocator, &[_][]const u8{ exe_dir, "ultralight.log" });
+            defer allocator.free(UL_LOG_DIR);
+
+            const log_path = ul.ulCreateString(UL_LOG_DIR);
             defer ul.ulDestroyString(log_path);
             ul.ulEnableDefaultLogger(log_path);
         }
+
         //ultralight renderer
         const config = ul.ulCreateConfig();
         {
-            const rp = ul.ulCreateString("/home/br4mos/PERSONAL/Developing/CalendarX11/deps/ultralight/resources/");
+            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            defer _ = gpa.deinit();
+            const allocator = gpa.allocator();
+
+            const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
+            defer allocator.free(exe_dir);
+
+            const RP = try std.fs.path.joinZ(allocator, &[_][]const u8{ exe_dir, "resources/" });
+            defer allocator.free(RP);
+
+            const rp = ul.ulCreateString(RP.ptr);
             defer ul.ulDestroyString(rp);
             ul.ulConfigSetResourcePathPrefix(config, rp);
         }
@@ -55,12 +76,22 @@ pub const Ultralight = struct {
 
         //navigate to the Vite dev server.
         {
-            const url = ul.ulCreateString(cfg.VITE_URL);
+            var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+            defer _ = gpa.deinit();
+            const allocator = gpa.allocator();
+
+            const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
+            defer allocator.free(exe_dir);
+
+            const VITE_URL = try std.fs.path.joinZ(allocator, &[_][]const u8{ "file:///", exe_dir, "dist/index.html" });
+            defer allocator.free(VITE_URL);
+
+            const url = ul.ulCreateString(VITE_URL.ptr);
             defer ul.ulDestroyString(url);
             ul.ulViewLoadURL(view, url);
-        }
 
-        std.log.info("Navigating to {s} …", .{cfg.VITE_URL});
+            std.log.info("Navigating to {s}...", .{VITE_URL});
+        }
 
         return Ultralight{
             .config = config,
@@ -157,6 +188,7 @@ pub const Ultralight = struct {
         if (written == 0) return ul.JSValueMakeUndefined(ctx);
         const json = buf[0 .. written - 1]; //JSStringGetUTF8CString includes the \0
 
+        //THIS MIGHT NOT BE THE CORRECT PATH ALWAYS - MIGHT NEED TO CHANGE FROM CWD
         //open or create events.jsonl, seek to end, append.
         const file = std.fs.cwd().openFile("events.jsonl", .{ .mode = .write_only }) catch
             std.fs.cwd().createFile("events.jsonl", .{}) catch {

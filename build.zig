@@ -50,11 +50,23 @@ pub fn build(b: *std.Build) void {
         .install_dir = .bin,
         .install_subdir = "resources",
     });
+    const copy_bash = b.addInstallFileWithDir(
+        b.path("scripts/gcalcall.sh"),
+        .bin,
+        "gcalcall.sh",
+    );
+    const copy_vite = b.addInstallDirectory(.{
+        .source_dir = b.path("ui/dist"),
+        .install_dir = .bin,
+        .install_subdir = "dist",
+    });
 
     const install_step = b.getInstallStep();
     install_step.dependOn(&install_exe.step);
     install_step.dependOn(&copy_libs.step);
     install_step.dependOn(&copy_resources.step);
+    install_step.dependOn(&copy_bash.step);
+    install_step.dependOn(&copy_vite.step);
 
     //Run - set cwd so that ./resources path works
     const run_cmd = b.addRunArtifact(exe);
