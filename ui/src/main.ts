@@ -27,6 +27,7 @@ interface AppState {
   timeStart: string;
   timeEnd: string;
   description: string;
+  wholeDay: boolean;
 }
 
 function nextHalfHour(offsetHalfHours = 0): string {
@@ -45,6 +46,7 @@ const state: AppState = {
   timeStart: "",
   timeEnd: "",
   description: "",
+  wholeDay: false,
 };
 
 const app = document.getElementById("app")!;
@@ -194,15 +196,25 @@ function renderDetailsScreen(): void {
           !isRange
             ? `
         <div class="form__label">Time</div>
-        <div class="time-range" id="time-range">
-          <div class="time-range__slot" id="slot-start" tabindex="0" role="spinbutton" aria-label="Start time" aria-valuenow="${state.timeStart}">
-            ${renderTimeDisplay(state.timeStart)}
-          </div>
-          <div class="time-range__sep">→</div>
-          <div class="time-range__slot" id="slot-end" tabindex="0" role="spinbutton" aria-label="End time" aria-valuenow="${state.timeEnd}">
-            ${renderTimeDisplay(state.timeEnd)}
-          </div>
-        </div>
+
+		<div class="time-row">
+			<div class="time-range ${state.wholeDay ? "time-range--hidden" : ""}" id="time-range">
+				<div class="time-range__slot" id="slot-start" tabindex="${state.wholeDay ? -1 : 0}" role="spinbutton" aria-label="Start time" aria-valuenow="${state.timeStart}">
+					${renderTimeDisplay(state.timeStart)}
+				</div>
+				<div class="time-range__sep">→</div>
+				<div class="time-range__slot" id="slot-end" tabindex="${state.wholeDay ? -1 : 0}" role="spinbutton" aria-label="End time" aria-valuenow="${state.timeEnd}">
+					${renderTimeDisplay(state.timeEnd)}
+				</div>
+			</div>
+			<button
+				id="wholeday-btn"
+				class="btn btn--toggle" ${state.wholeDay ? "btn--toggle-on" : ""}"
+				tabindex = 0
+				aria-pressed="${state.wholeDay}"
+				title="Whole day event"
+			>All day</button>
+		</div>
         <p class="form__hint">Tab between fields · ↑↓ adjust · ←→ hour/minute</p>
         `
             : ""
@@ -239,6 +251,7 @@ function renderDetailsScreen(): void {
 
   backBtn.addEventListener("click", () => {
     ac.abort();
+    state.wholeDay = false;
     state.screen = "date";
     render();
   });
@@ -273,6 +286,18 @@ function renderDetailsScreen(): void {
   );
 
   if (!isRange) {
+    const wholeDayBtn = document.getElementById(
+      "wholeday-btn",
+    ) as HTMLButtonElement;
+    wholeDayBtn.addEventListener("click", () => {
+      state.wholeDay = !state.wholeDay;
+      //rerender details
+      ac.abort();
+      render();
+    });
+  }
+
+  if (!isRange && !state.wholeDay) {
     const slotStart = document.getElementById("slot-start")!;
     const slotEnd = document.getElementById("slot-end")!;
     initTimeSlot(slotStart, "start", signal);
@@ -443,13 +468,14 @@ function renderDoneScreen(): void {
 async function saveEvent(): Promise<void> {
   if (!state.dateOutput) return;
   const isRange = state.dateOutput.isRange;
+  const wholeDay = isRange || state.wholeDay;
   const record: EventRecord = {
     date: state.dateOutput.start.iso.slice(0, 10),
     dateEnd: isRange ? state.dateOutput.end.iso.slice(0, 10) : undefined,
     dateText: state.dateOutput.text,
-    wholeDay: isRange,
-    timeStart: isRange ? undefined : state.timeStart,
-    timeEnd: isRange ? undefined : state.timeEnd,
+    wholeDay,
+    timeStart: wholeDay ? undefined : state.timeStart,
+    timeEnd: wholeDay ? undefined : state.timeEnd,
     description: state.description.trim(),
     savedAt: new Date().toISOString(),
   };
