@@ -289,27 +289,23 @@ pub const Ultralight = struct {
         );
         ul.ulViewFireKeyEvent(view, ke);
         ul.ulDestroyKeyEvent(ke);
+    }
 
-        //synthesise a Char event for printable ASCII on key-down.
-        //extend this range (or use XLookupString) for non-ASCII / compose input.
-        if (kind == ul.kKeyEventType_RawKeyDown and ks >= 0x20 and ks <= 0x7E) {
-            var ch_buf = [2]u8{ @intCast(ks & 0xFF), 0 };
-            const text = ul.ulCreateString(&ch_buf);
-            defer ul.ulDestroyString(text);
-
-            const ce = ul.ulCreateKeyEvent(
-                ul.kKeyEventType_Char,
-                xlModToUL(state),
-                0,
-                0,
-                text,
-                text,
-                false,
-                false,
-                false,
-            );
-            ul.ulViewFireKeyEvent(view, ce);
-            ul.ulDestroyKeyEvent(ce);
-        }
+    //separate firechar to handle - shift/ctrl and etc
+    pub fn fireChar(view: ul.ULView, text: [*]const u8, len:usize) void {
+        var buf: [64]u8 = undefined;
+        if (len == 0 or len >= buf.len) return;
+        @memcpy(buf[0..len], text[0..len]);
+        buf[len] = 0;
+        const ul_text = ul.ulCreateString(&buf);
+        defer ul.ulDestroyString(ul_text);
+        const ce = ul.ulCreateKeyEvent(
+            ul.kKeyEventType_Char,
+            0, 0, 0,
+            ul_text, ul_text,
+            false, false, false,
+        );
+        ul.ulViewFireKeyEvent(view, ce);
+        ul.ulDestroyKeyEvent(ce);
     }
 };

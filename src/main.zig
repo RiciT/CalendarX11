@@ -95,6 +95,17 @@ pub fn main() !void {
                         break;
                     }
                     Ultra.fireKey(ultra.view, ul.kKeyEventType_RawKeyDown, ev.xkey.state, ks, @intCast(ev.xkey.keycode));
+                    //XLookupString will resolve the actual char
+                    //with locale and modifiers taken into account
+                    //will also make shortcuts possible
+                    if (ev.xkey.state & (xl.ControlMask | xl.Mod1Mask | xl.Mod4Mask) == 0) {
+                        var char_buf: [32]u8 = undefined;
+                        var ks_out: xl.KeySym = undefined;
+                        const n = xl.XLookupString(&ev.xkey, &char_buf, char_buf.len - 1, &ks_out, null);
+                        if (n > 0) {
+                            Ultra.fireChar(ultra.view, &char_buf, @intCast(n));
+                        }
+                    }
                 },
 
                 xl.KeyRelease => {
