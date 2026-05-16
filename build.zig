@@ -60,6 +60,11 @@ pub fn build(b: *std.Build) void {
         .install_dir = .bin,
         .install_subdir = "dist",
     });
+    const copy_env = b.addInstallFileWithDir(
+        b.path(".env"),
+        .bin,
+        ".env",
+    );
 
     const install_step = b.getInstallStep();
     install_step.dependOn(&install_exe.step);
@@ -67,6 +72,7 @@ pub fn build(b: *std.Build) void {
     install_step.dependOn(&copy_resources.step);
     install_step.dependOn(&copy_bash.step);
     install_step.dependOn(&copy_vite.step);
+    install_step.dependOn(&copy_env.step);
 
     //Run - set cwd so that ./resources path works
     const run_cmd = b.addRunArtifact(exe);
