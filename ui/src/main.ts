@@ -82,7 +82,7 @@ function renderDateScreen(): void {
           id="date-picker"
           placeholder="Type here..."
           theme="dark"
-		  locale="hu-HU"
+		  locale="en-EN"
         ></magic-date-picker>
       </div>
       <!-- live parsing -->
@@ -91,7 +91,6 @@ function renderDateScreen(): void {
       <div id="confirmation" class="hidden confirmation">
         <div id="calendar-slot"></div>
         <div class="confirmation__footer">
-          <div id="date-summary" class="confirmation__summary"></div>
           <button id="next-btn" class="btn btn--primary">
             Next <span class="btn__arrow">→</span>
           </button>
@@ -103,7 +102,6 @@ function renderDateScreen(): void {
   const picker = document.getElementById("date-picker") as MagicDatePicker;
   const parseFeedback = document.getElementById("parse-feedback")!;
   const confirmation = document.getElementById("confirmation")!;
-  const dateSummary = document.getElementById("date-summary")!;
   const nextBtn = document.getElementById("next-btn") as HTMLButtonElement;
 
   function advance() {
@@ -133,7 +131,6 @@ function renderDateScreen(): void {
   ) => {
     state.dateOutput = e.detail;
     parseFeedback.textContent = "";
-    dateSummary.innerHTML = `<span class="check-icon">✓</span> ${e.detail.text}`;
     confirmation.classList.remove("hidden");
     confirmation.classList.remove("hidden");
     setTimeout(() => nextBtn.focus(), 0);
