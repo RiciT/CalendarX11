@@ -245,15 +245,6 @@ magic-date-picker {
   margin-top: 0.5rem;
 }
 
-.form__optional {
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  margin-left: 0.3rem;
-}
-
 .form__input {
   background: var(--surface-2);
   border: 1px solid var(--border);

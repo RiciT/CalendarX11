@@ -82,6 +82,7 @@ function renderDateScreen(): void {
           id="date-picker"
           placeholder="Type here..."
           theme="dark"
+		  locale="hu-HU"
         ></magic-date-picker>
       </div>
       <!-- live parsing -->
@@ -166,6 +167,21 @@ function renderDateScreen(): void {
       picker.focus?.();
       callReady();
     });
+
+    //inject a style into the shadow DOM to hide the help text
+    if (picker.shadowRoot) {
+      const injectHide = () => {
+        if (picker.shadowRoot!.querySelector(".help-text")) {
+          const style = document.createElement("style");
+          style.textContent = ".help-text { display: none !important; }";
+          picker.shadowRoot!.appendChild(style);
+          observer.disconnect();
+        }
+      };
+      const observer = new MutationObserver(injectHide);
+      observer.observe(picker.shadowRoot, { childList: true, subtree: true });
+      injectHide(); //also try immediately
+    }
   });
 }
 
@@ -221,13 +237,12 @@ function renderDetailsScreen(): void {
         }
         <label class="form__label" for="desc-input">
           Description
-          <span class="form__optional">(optional)</span>
         </label>
         <textarea
           class="form__input form__textarea"
           id="desc-input"
           rows="4"
-          placeholder="What's this event about?"
+          placeholder=""
           aria-label="Event description"
         >${state.description}</textarea>
         <div class="form__actions">
@@ -243,6 +258,9 @@ function renderDetailsScreen(): void {
   ) as HTMLTextAreaElement;
   const backBtn = document.getElementById("back-btn") as HTMLButtonElement;
   const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+  const wholeDayBtn = document.getElementById(
+    "wholeday-btn",
+  ) as HTMLButtonElement;
 
   //persist values to state on change
   descInput.addEventListener("input", () => {
@@ -278,6 +296,10 @@ function renderDetailsScreen(): void {
         backBtn.click();
         return;
       }
+      if (focused === wholeDayBtn) {
+        wholeDayBtn.click();
+        return;
+      }
       if (focused?.classList.contains("time-range__slot")) return;
       e.preventDefault();
       doSave();
@@ -286,14 +308,14 @@ function renderDetailsScreen(): void {
   );
 
   if (!isRange) {
-    const wholeDayBtn = document.getElementById(
-      "wholeday-btn",
-    ) as HTMLButtonElement;
     wholeDayBtn.addEventListener("click", () => {
       state.wholeDay = !state.wholeDay;
       //rerender details
       ac.abort();
       render();
+      requestAnimationFrame(() => {
+        document.getElementById("wholeday-btn")?.focus();
+      });
     });
   }
 
