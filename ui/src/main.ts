@@ -15,6 +15,7 @@ interface EventRecord {
   wholeDay: boolean;
   timeStart?: string;
   timeEnd?: string;
+  title: string;
   description: string;
   savedAt: string;
 }
@@ -26,6 +27,7 @@ interface AppState {
   dateOutput: DatePickerOutput | null;
   timeStart: string;
   timeEnd: string;
+  title: string;
   description: string;
   wholeDay: boolean;
 }
@@ -45,6 +47,7 @@ const state: AppState = {
   dateOutput: null,
   timeStart: "",
   timeEnd: "",
+  title: "",
   description: "",
   wholeDay: false,
 };
@@ -217,6 +220,17 @@ function renderDetailsScreen(): void {
         `
             : ""
         }
+		<label class="form__label" for="title-input">
+			Title
+		</label>
+		<input
+		  class="form__input"
+		  id="title-input"
+		  type="text"
+		  placeholder=""
+		  aria-label="Event title"
+		  value="${state.title}"
+		/>
         <label class="form__label" for="desc-input">
           Description
         </label>
@@ -238,6 +252,7 @@ function renderDetailsScreen(): void {
   const descInput = document.getElementById(
     "desc-input",
   ) as HTMLTextAreaElement;
+  const titleInput = document.getElementById("title-input") as HTMLInputElement;
   const backBtn = document.getElementById("back-btn") as HTMLButtonElement;
   const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
   const wholeDayBtn = document.getElementById(
@@ -249,15 +264,22 @@ function renderDetailsScreen(): void {
     state.description = descInput.value;
   });
 
+  titleInput.addEventListener("input", () => {
+    state.title = titleInput.value;
+  });
+
   backBtn.addEventListener("click", () => {
     ac.abort();
     state.wholeDay = false;
+    state.title = "";
+    state.description = "";
     state.screen = "date";
     render();
   });
 
   async function doSave() {
     state.description = descInput.value;
+    state.title = titleInput.value;
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving...";
     ac.abort();
@@ -273,6 +295,7 @@ function renderDetailsScreen(): void {
     (e: KeyboardEvent) => {
       if (e.key !== "Enter") return;
       const focused = document.activeElement;
+      if (focused === titleInput) return;
       if (focused === descInput) return;
       if (focused === backBtn) {
         backBtn.click();
@@ -308,7 +331,7 @@ function renderDetailsScreen(): void {
     initTimeSlot(slotEnd, "end", signal);
     slotStart.focus();
   } else {
-    descInput.focus();
+    titleInput.focus();
   }
 }
 
@@ -480,6 +503,7 @@ async function saveEvent(): Promise<void> {
     wholeDay,
     timeStart: wholeDay ? undefined : state.timeStart,
     timeEnd: wholeDay ? undefined : state.timeEnd,
+    title: state.title.trim(),
     description: state.description.trim(),
     savedAt: new Date().toISOString(),
   };
