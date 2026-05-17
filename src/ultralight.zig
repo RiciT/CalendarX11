@@ -177,7 +177,15 @@ pub const Ultralight = struct {
         arguments: [*c]const ul.JSValueRef,
         _: [*c]ul.JSValueRef,
     ) callconv(.c) ul.JSValueRef {
-        if (argument_count == 0) return ul.JSValueMakeUndefined(ctx);
+        //there cannot be 'try'-s in a callconv function so we need to export it to an inner function
+        saveInnerEvent(ctx, argument_count, arguments) catch |err| {
+            std.log.err("JS Bridge: saveEvent failed: {}", .{err});
+        };
+        return ul.JSValueMakeUndefined(ctx);
+    }
+
+    fn saveInnerEvent(ctx: ul.JSContextRef, argument_count: usize, arguments: [*c]const ul.JSValueRef) !void {
+        if (argument_count == 0) return;
 
         const js_str = ul.JSValueToStringCopy(ctx, arguments[0], null);
         defer ul.JSStringRelease(js_str);
@@ -185,23 +193,27 @@ pub const Ultralight = struct {
         //event buffer - 8k should be much more than enough
         var buf: [8192]u8 = undefined;
         const written = ul.JSStringGetUTF8CString(js_str, &buf, buf.len);
-        if (written == 0) return ul.JSValueMakeUndefined(ctx);
+        if (written == 0) return;
         const json = buf[0 .. written - 1]; //JSStringGetUTF8CString includes the \0
 
-        //THIS MIGHT NOT BE THE CORRECT PATH ALWAYS - MIGHT NEED TO CHANGE FROM CWD
-        //open or create events.jsonl, seek to end, append.
-        const file = std.fs.cwd().openFile("events.jsonl", .{ .mode = .write_only }) catch
-            std.fs.cwd().createFile("events.jsonl", .{}) catch {
-            std.log.err("JS bridge: could not open/create events.jsonl", .{});
-            return ul.JSValueMakeUndefined(ctx);
-        };
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
+
+        const exe_dir = try std.fs.selfExeDirPathAlloc(allocator);
+        defer allocator.free(exe_dir);
+
+        const path = try std.fs.path.joinZ(allocator, &[_][]const u8{ exe_dir, "events.jsonl" });
+        defer allocator.free(path);
+
+        const file = std.fs.openFileAbsoluteZ(path, .{ .mode = .write_only }) catch
+            try std.fs.createFileAbsoluteZ(path, .{});
         defer file.close();
-        file.seekFromEnd(0) catch {};
-        file.writeAll(json) catch {};
-        file.writeAll("\n") catch {};
+        try file.seekFromEnd(0);
+        try file.writeAll(json);
+        try file.writeAll("\n");
 
         std.log.info("JS bridge: event saved ({d} bytes).", .{json.len});
-        return ul.JSValueMakeUndefined(ctx);
     }
 
     //window.__exitApp()
